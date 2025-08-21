@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Planowanie wydarzenia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+  <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold mb-4">Nowe wydarzenie</h1>
+
+    <!-- Nazwa wydarzenia -->
+    <label for="eventName" class="block mb-2 font-semibold">Nazwa wydarzenia:</label>
+    <input id="eventName" type="text" class="border rounded p-2 w-full mb-4" placeholder="Np. Msza Święta - Niedziela Palmowa">
+
+    <!-- Data i godzina -->
+    <label for="eventDateTime" class="block mb-2 font-semibold">Data i godzina:</label>
+    <input id="eventDateTime" type="datetime-local" class="border rounded p-2 w-full mb-4">
+
+    <!-- Typ wydarzenia -->
+    <label for="eventType" class="block mb-2 font-semibold">Typ wydarzenia:</label>
+    <select id="eventType" class="border rounded p-2 w-full mb-4">
+      <option value="">-- wybierz --</option>
+      <option value="msza">Msza Święta</option>
+      <option value="droga">Droga Krzyżowa</option>
+      <option value="inne">Inne</option>
+    </select>
+
+    <!-- Kontener na części -->
+    <div id="eventParts" class="space-y-4"></div>
+  </div>
+
+  <!-- Modal do wyszukiwania pieśni -->
+  <div id="songModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-1/2">
+      <h2 class="text-xl font-bold mb-4">Dodaj pieśń</h2>
+      <input id="songSearch" type="text" placeholder="Szukaj pieśni po tytule..."
+        class="border rounded p-2 w-full mb-4">
+
+      <ul id="songResults" class="space-y-2"></ul>
+
+      <button id="closeModal" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded">Zamknij</button>
+    </div>
+  </div>
+
+  <script>
+    const eventTypeSelect = document.getElementById('eventType');
+    const eventPartsContainer = document.getElementById('eventParts');
+    const songModal = document.getElementById('songModal');
+    const songSearch = document.getElementById('songSearch');
+    const songResults = document.getElementById('songResults');
+    const closeModal = document.getElementById('closeModal');
+
+    let currentPartWrapper = null; // do którego miejsca dodajemy pieśń
+
+    const mszaParts = [
+      "Wejście", "Kyrie", "Aklamacja przed Ewangelią", "Przygotowanie darów",
+      "Sanctus", "Agnus Dei", "Komunia", "Dziękczynienie", "Rozesłanie"
+    ];
+
+    const drogaParts = [
+      "Pieśń na rozpoczęcie",
+      ...Array.from({length: 14}, (_, i) => `Stacja ${i+1}`),
+      "Pieśń na zakończenie"
+    ];
+
+    eventTypeSelect.addEventListener('change', () => {
+      const type = eventTypeSelect.value;
+      eventPartsContainer.innerHTML = "";
+
+      let parts = [];
+
+      if (type === "msza") {
+        parts = mszaParts;
+      } else if (type === "droga") {
+        parts = drogaParts;
+      } else if (type === "inne") {
+        const addPartBtn = document.createElement("button");
+        addPartBtn.textContent = "➕ Dodaj część";
+        addPartBtn.className = "bg-blue-500 text-white px-4 py-2 rounded";
+        addPartBtn.addEventListener("click", () => {
+          const newName = prompt("Nazwa nowej części:");
+          if (newName) addPart(newName);
+        });
+        eventPartsContainer.appendChild(addPartBtn);
+      }
+
+      parts.forEach(part => addPart(part));
+    });
+
+    function addPart(name) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "border p-3 rounded bg-gray-50";
+
+      const title = document.createElement("span");
+      title.textContent = name;
+      title.className = "font-semibold";
+
+      const addSongBtn = document.createElement("button");
+      addSongBtn.textContent = "➕ Dodaj pieśń";
+      addSongBtn.className = "ml-4 bg-green-500 text-white px-2 py-1 rounded";
+
+      const songList = document.createElement("ul");
+      songList.className = "mt-2 space-y-1";
+
+      addSongBtn.addEventListener("click", () => {
+        currentPartWrapper = songList;
+        openSongModal();
+      });
+
+      wrapper.appendChild(title);
+      wrapper.appendChild(addSongBtn);
+      wrapper.appendChild(songList);
+
+      eventPartsContainer.appendChild(wrapper);
+    }
+
+    function openSongModal() {
+      songModal.classList.remove("hidden");
+      songSearch.value = "";
+      songResults.innerHTML = "";
+    }
+
+    closeModal.addEventListener("click", () => {
+      songModal.classList.add("hidden");
+    });
+
+    // wyszukiwanie pieśni AJAX
+    songSearch.addEventListener("input", () => {
+      const query = songSearch.value.trim();
+      if (query.length < 2) {
+        songResults.innerHTML = "";
+        return;
+      }
+
+      fetch(`search_songs.php?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+          songResults.innerHTML = "";
+          data.forEach(song => {
+            const li = document.createElement("li");
+            li.className = "p-2 border rounded cursor-pointer hover:bg-gray-200";
+            li.innerHTML = `<strong>${song.tytul}</strong> ${song.pliki ? `- <a href="${song.pliki}" target="_blank" class="text-blue-600 underline">Plik</a>` : ''}`;
+
+            li.addEventListener("click", () => {
+              const songItem = document.createElement("li");
+              songItem.innerHTML = `<strong>${song.tytul}</strong> ${song.pliki ? `- <a href="${song.pliki}" target="_blank" class="text-blue-600 underline">Plik</a>` : ''}`;
+              currentPartWrapper.appendChild(songItem);
+              songModal.classList.add("hidden");
+            });
+
+            songResults.appendChild(li);
+          });
+        });
+    });
+  </script>
+</body>
+</html>

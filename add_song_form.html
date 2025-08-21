@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dodaj nową pieśń</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; background: #f9f9f9; }
+    form { max-width: 600px; background: #fff; padding: 1.5rem; border-radius: 8px; }
+    label { display: block; margin-top: 1rem; font-weight: bold; }
+    input[type="text"], textarea, select {
+      width: 100%; padding: 0.5rem; margin-top: 0.3rem;
+      border: 1px solid #ccc; border-radius: 4px;
+      font-size: 1rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    textarea { height: 120px; }
+    button {
+      margin-top: 1.5rem; padding: 0.7rem 1.5rem; font-size: 1rem;
+      background-color: #2a7ae2; color: white; border: none; border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #205bb5; }
+  </style>
+</head>
+<body>
+  <h1>Dodaj nową pieśń</h1>
+
+  <form action="save_song.php" method="POST">
+    <label for="title">Tytuł pieśni *</label>
+    <input type="text" id="title" name="title" required />
+
+    <label for="hymn_number">Numer hymnu / strony</label>
+    <input type="text" id="hymn_number" name="hymn_number" />
+
+    <label for="period">Okres</label>
+    <select id="period" name="period">
+      <option value="">-- wybierz --</option>
+      <option>Adwent</option>
+      <option>Wielki Post</option>
+      <option>Okres zwykły</option>
+      <option>Boże Narodzenie</option>
+      <option>Wielkanoc</option>
+    </select>
+
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">-- wybierz --</option>
+      <option>Wdrożone</option>
+      <option>Niewdrożone</option>
+      <option>Zapomniane</option>
+    </select>
+
+    <label for="notes">Notatki</label>
+    <textarea id="notes" name="notes"></textarea>
+
+    <label for="audio">Link do pliku audio (URL)</label>
+    <input type="text" id="audio" name="audio" />
+
+    <label for="pdf">Link do PDF (URL)</label>
+    <input type="text" id="pdf" name="pdf" />
+
+    <label for="lyrics">Tekst pieśni</label>
+    <textarea id="lyrics" name="lyrics"></textarea>
+
+    <button type="submit">Zapisz pieśń</button>
+  </form>
+
+  <p><a href="list_songs.php">« Powrót do listy pieśni</a></p>
+</body>
+</html>
