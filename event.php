@@ -26,7 +26,15 @@ $msza_parts_order = [
 ];
 
 // Pobranie wszystkich części przypisanych do wydarzenia
-$sql = "SELECT ep.id AS part_id, ep.name AS part_name, s.id AS song_id, s.title, s.hymn_number, s.page_number, s.pdf, s.audio
+$sql = "SELECT 
+    ep.id AS part_id, 
+    ep.name AS part_name, 
+    s.id AS song_id, 
+    s.title, 
+    s.hymn_number, 
+    s.page_number, 
+    s.pdf, 
+    s.audio
 FROM event_parts ep
 LEFT JOIN event_songs es ON es.part_id = ep.id
 LEFT JOIN songs s ON s.id = es.song_id

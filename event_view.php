@@ -12,26 +12,40 @@ $stmt = $conn->prepare("SELECT * FROM events WHERE id=?");
 $stmt->bind_param("i", $event_id);
 $stmt->execute();
 $event_result = $stmt->get_result();
-if($event_result->num_rows===0) die("Nie znaleziono wydarzenia.");
+if($event_result->num_rows === 0) die("Nie znaleziono wydarzenia.");
 $event = $event_result->fetch_assoc();
 
 // Kolejność części mszy
 $MSZA_PARTS = ["Wejście","Kyrie","Aklamacja przed Ewangelią","Przygotowanie darów","Sanctus","Agnus Dei","Komunia","Dziękczynienie","Rozesłanie"];
 
-// Pobranie repertuaru
 $sql = "
 SELECT ep.name AS part_name, s.title, ep.page_number, s.pdf, s.audio
 FROM event_parts ep
-LEFT JOIN event_songs es ON ep.id=es.part_id
-LEFT JOIN songs s ON es.song_id=s.id
-WHERE ep.event_id=?
-ORDER BY FIELD(ep.name, '".implode("','",$MSZA_PARTS)."'), es.id ASC
+LEFT JOIN event_songs es ON ep.id = es.part_id
+LEFT JOIN songs s ON es.song_id = s.id
+WHERE ep.event_id = ?
+ORDER BY FIELD(ep.name, '".implode("','", $MSZA_PARTS)."'), es.id ASC
 ";
-$stmt2 = $conn->prepare($sql);
-$stmt2->bind_param("i",$event_id);
+$stmt2->bind_param("i", $event_id);
 $stmt2->execute();
-$result = $stmt2->get_result();
-$repertory = $result->fetch_all(MYSQLI_ASSOC);
+$parts_result = $stmt2->get_result();
+$event_parts = [];
+while($row = $parts_result->fetch_assoc()){
+    $event_parts[$row['name']] = $row['id'];
+}
+
+// Pobranie wszystkich pieśni przypisanych do wydarzenia
+$stmt3 = $conn->prepare($sql);
+if (!$stmt3) {
+    die("Błąd przygotowania zapytania (repertuar): " . $conn->error);
+}
+$stmt3->bind_param("i", $event_id);
+$stmt3->execute();
+$result = $stmt3->get_result();
+$repertory = [];
+while($row = $songs_result->fetch_assoc()){
+    $repertory[$row['part_id']] = $row;
+}
 
 ?>
 <!doctype html>
@@ -58,7 +72,6 @@ a:hover { text-decoration: underline; }
 <p><strong>Opis:</strong> <?=nl2br(htmlspecialchars($event['description']))?></p>
 
 <h2>Repertuar:</h2>
-<?php if($repertory): ?>
 <table>
 <tr>
 <th>Część</th>
@@ -67,19 +80,20 @@ a:hover { text-decoration: underline; }
 <th>PDF</th>
 <th>Audio</th>
 </tr>
-<?php foreach($repertory as $row): ?>
+<?php foreach($MSZA_PARTS as $part_name): 
+      if(!isset($event_parts[$part_name])) continue; // jeśli część nie jest w tym wydarzeniu, pomijamy
+      $part_id = $event_parts[$part_name];
+      $song = $repertory[$part_id] ?? null;
+?>
 <tr>
-<td><?=htmlspecialchars($row['part_name'])?></td>
-<td><?=htmlspecialchars($row['title'] ?? '')?></td>
-<td><?=htmlspecialchars($row['page_number'] ?? '')?></td>
-<td><?php if(!empty($row['pdf'])): ?><a href="<?=htmlspecialchars($row['pdf'])?>" target="_blank">PDF</a><?php endif;?></td>
-<td><?php if(!empty($row['audio'])): ?><a href="<?=htmlspecialchars($row['audio'])?>" target="_blank">Audio</a><?php endif;?></td>
+<td><?=htmlspecialchars($part_name)?></td>
+<td><?=htmlspecialchars($song['title'] ?? '')?></td>
+<td><?=htmlspecialchars($song['page_number'] ?? '')?></td>
+<td><?php if(!empty($song['pdf'])): ?><a href="<?=htmlspecialchars($song['pdf'])?>" target="_blank">PDF</a><?php endif;?></td>
+<td><?php if(!empty($song['audio'])): ?><a href="<?=htmlspecialchars($song['audio'])?>" target="_blank">Audio</a><?php endif;?></td>
 </tr>
 <?php endforeach; ?>
 </table>
-<?php else: ?>
-<p>Brak repertuaru dla tego wydarzenia.</p>
-<?php endif; ?>
 
 <p><a href="index.php">&laquo; Powrót do listy wydarzeń</a></p>
 </body>
