@@ -1,12 +1,7 @@
 <?php
-$conn = new mysqli('localhost', 'root', '', 'schola');
-
+$conn = new mysqli('localhost', 'twoj_uzytkownik', 'twoje_haslo', 'twoja_baza');
 if ($conn->connect_error) {
-    die('Błąd połączenia: ' . $conn->connect_error);
+    die("Błąd: " . $conn->connect_error);
 }
-
-// Ustaw kodowanie znaków na UTF-8
-$conn->set_charset("utf8mb4");
-
-echo 'Połączono z bazą danych!';
+echo "Połączono!";
 ?>

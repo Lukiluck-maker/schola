@@ -1,9 +1,9 @@
 <?php
 // config połączenia
-$host = 'sql.ugu.pl';
+$host = 'localhost';
 $db   = 'schola';
-$user = 'lukib';
-$pass = 'bgVL1GE8h744wFqV';
+$user = 'root';
+$pass = '';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -21,11 +21,13 @@ try {
 $q = $_GET['q'] ?? '';
 $q = trim($q);
 
-if(strlen($q) >= 2){
-    $stmt = $pdo->prepare("SELECT tytul, hymn_number, pdf, audio FROM piesni WHERE tytul LIKE ?");
-    $stmt->execute(['%'.$q.'%']);
-    $results = $stmt->fetchAll();
-    echo json_encode($results);
-} else {
+if(strlen($q) < 2){
     echo json_encode([]);
+    exit;
 }
+
+$stmt = $pdo->prepare("SELECT id, title, hymn_number, pdf, link_audio FROM piesni WHERE title LIKE ? ORDER BY title LIMIT 20");
+$stmt->execute(['%'.$q.'%']);
+$songs = $stmt->fetchAll();
+
+echo json_encode($songs);

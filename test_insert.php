@@ -1,8 +1,8 @@
 <?php
-$host = 'localhost';
+$host = 'sql.ugu.pl';
 $db   = 'schola';
-$user = 'root';
-$pass = ''; // hasło root z XAMPP
+$user = 'lukib';
+$pass = 'bgVL1GE8h744wFqV';
 $charset = 'utf8mb4';
 
 try {

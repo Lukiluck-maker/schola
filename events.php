@@ -41,7 +41,7 @@ if (isset($_GET['delete'])) {
 }
 
 // === Pobranie listy wydarzeń ===
-$res = $conn->query("SELECT * FROM events ORDER BY event_date DESC");
+$res = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
 $events = [];
 if ($res) while($row = $res->fetch_assoc()) $events[] = $row;
 ?>
@@ -101,51 +101,6 @@ if ($res) while($row = $res->fetch_assoc()) $events[] = $row;
 <?php endif; ?>
     </tbody>
 </table>
-
-<?php
-// Opcjonalnie: podgląd repertuaru dla każdego wydarzenia poniżej tabeli
-foreach($events as $e):
-    $eventId = (int)$e['id'];
-    $partsRes = $conn->query("SELECT * FROM event_parts WHERE event_id=$eventId ORDER BY id ASC");
-    if($partsRes && $partsRes->num_rows > 0):
-?>
-    <div class="mt-6 p-4 border rounded-md bg-gray-50">
-        <h2 class="font-bold mb-2"><?= htmlspecialchars($e['title']) ?> - Repertuar</h2>
-        <ul class="space-y-2">
-        <?php while($part = $partsRes->fetch_assoc()): ?>
-            <li class="border p-2 rounded-md bg-white">
-                <div class="font-medium"><?= htmlspecialchars($part['name']) ?></div>
-                <?php
-                    $songsRes = $conn->query("SELECT * FROM event_songs WHERE part_id=".$part['id']." ORDER BY id ASC");
-                    if($songsRes && $songsRes->num_rows>0):
-                        while($song = $songsRes->fetch_assoc()):
-                ?>
-                    <div class="text-sm text-slate-600 ml-2 mt-1 flex gap-2 flex-wrap items-center">
-                        <?php if($song['hymn_number']): ?>
-                            <span>str. <?= htmlspecialchars($song['hymn_number']) ?></span>
-                        <?php endif; ?>
-                        <span><?= htmlspecialchars($song['title']) ?></span>
-                        <?php if($song['pdf']): ?>
-                            <a href="<?= htmlspecialchars($song['pdf']) ?>" target="_blank" class="text-blue-600 underline">PDF</a>
-                        <?php endif; ?>
-                        <?php if($song['audio']): ?>
-                            <a href="<?= htmlspecialchars($song['audio']) ?>" target="_blank" class="text-green-600 underline">Audio</a>
-                        <?php endif; ?>
-                    </div>
-                <?php
-                        endwhile;
-                    else:
-                        echo '<div class="text-sm text-slate-500 ml-2 mt-1">Brak pieśni w tej części.</div>';
-                    endif;
-                ?>
-            </li>
-        <?php endwhile; ?>
-        </ul>
-    </div>
-<?php
-    endif;
-endforeach;
-?>
 
 </div>
 </body>

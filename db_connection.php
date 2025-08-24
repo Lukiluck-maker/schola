@@ -1,10 +1,10 @@
 <?php
-$servername = "localhost"; // albo 127.0.0.1
-$username = "root";        // domyślny XAMPP
-$password = "";            // domyślnie puste w XAMPP
-$dbname = "schola";        // Twoja baza danych
+$host = 'sql203.infinityfree.com'; // lub dokładny host z panelu UGU.PL
+$user = 'if0_39780690';
+$password = 'qVPacLdlsUk';
+$database = 'if0_39780690_XXX';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $user, $password, $database);
 
 if ($conn->connect_error) {
     die("Błąd połączenia z bazą danych: " . $conn->connect_error);

@@ -1,100 +1,122 @@
 <?php
-session_start();
-include 'db_connection.php';
+$host = 'sql.ugu.pl';
+$db   = 'schola';
+$user = 'lukib';
+$pass = 'bgVL1GE8h744wFqV';
+$charset = 'utf8mb4';
 
-if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
-    die("Nieprawidłowe ID wydarzenia.");
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+];
+
+try {
+    $pdo = new PDO($dsn, $user, $pass, $options);
+} catch (\PDOException $e) {
+    die("Błąd połączenia z bazą: " . $e->getMessage());
 }
-$event_id = (int)$_GET['id'];
+
+$event_id = $_GET['id'] ?? null;
+if(!$event_id) die("Brak ID wydarzenia");
 
 // Pobranie wydarzenia
-$stmt = $conn->prepare("SELECT * FROM events WHERE id=?");
-$stmt->bind_param("i", $event_id);
-$stmt->execute();
-$event_result = $stmt->get_result();
-if($event_result->num_rows === 0) die("Nie znaleziono wydarzenia.");
-$event = $event_result->fetch_assoc();
+$stmt = $pdo->prepare("SELECT * FROM events WHERE id=?");
+$stmt->execute([$event_id]);
+$event = $stmt->fetch();
+if(!$event) die("Nie znaleziono wydarzenia");
 
-// Kolejność części mszy
-$MSZA_PARTS = ["Wejście","Kyrie","Aklamacja przed Ewangelią","Przygotowanie darów","Sanctus","Agnus Dei","Komunia","Dziękczynienie","Rozesłanie"];
+// Pobranie części i pieśni
+$stmt = $pdo->prepare("
+    SELECT ep.id as part_id, ep.part_name, es.tytul, es.hymn_number, es.pdf, es.audio
+    FROM event_parts ep
+    LEFT JOIN event_songs es ON es.part_id = ep.id
+    WHERE ep.event_id=?
+    ORDER BY ep.id ASC, es.id ASC
+");
+$stmt->execute([$event_id]);
+$rows = $stmt->fetchAll();
 
-$sql = "
-SELECT ep.name AS part_name, s.title, ep.page_number, s.pdf, s.audio
-FROM event_parts ep
-LEFT JOIN event_songs es ON ep.id = es.part_id
-LEFT JOIN songs s ON es.song_id = s.id
-WHERE ep.event_id = ?
-ORDER BY FIELD(ep.name, '".implode("','", $MSZA_PARTS)."'), es.id ASC
-";
-$stmt2->bind_param("i", $event_id);
-$stmt2->execute();
-$parts_result = $stmt2->get_result();
-$event_parts = [];
-while($row = $parts_result->fetch_assoc()){
-    $event_parts[$row['name']] = $row['id'];
+// Grupowanie po częściach
+$parts = [];
+foreach($rows as $row){
+    $pid = $row['part_id'];
+    if(!isset($parts[$pid])){
+        $parts[$pid] = ['name'=>$row['part_name'],'songs'=>[]];
+    }
+    if($row['tytul']) {
+        $parts[$pid]['songs'][] = [
+            'tytul'=>$row['tytul'],
+            'hymn_number'=>$row['hymn_number'],
+            'pdf'=>$row['pdf'],
+            'audio'=>$row['audio']
+        ];
+    }
 }
-
-// Pobranie wszystkich pieśni przypisanych do wydarzenia
-$stmt3 = $conn->prepare($sql);
-if (!$stmt3) {
-    die("Błąd przygotowania zapytania (repertuar): " . $conn->error);
-}
-$stmt3->bind_param("i", $event_id);
-$stmt3->execute();
-$result = $stmt3->get_result();
-$repertory = [];
-while($row = $songs_result->fetch_assoc()){
-    $repertory[$row['part_id']] = $row;
-}
-
 ?>
+
 <!doctype html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
+<title>Podgląd wydarzenia</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?=htmlspecialchars($event['title'])?> - Schola</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
-<style>
-body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
-h1,h2 { color: #111; }
-table { border-collapse: collapse; width: 100%; background: #fff; margin-top: 10px; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-th { background: #eee; }
-a { color: #1a73e8; text-decoration: none; }
-a:hover { text-decoration: underline; }
-</style>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen p-6">
+<div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold"><?=$event['title']?></h1>
+    <div class="text-gray-600 mb-1"><?=$event['description']?></div>
+    <div class="text-gray-600"><?=$event['event_date']?></div>
+  </header>
 
-<h1><?=htmlspecialchars($event['title'])?></h1>
-<p><strong>Data:</strong> <?=date('d.m.Y H:i', strtotime($event['event_date']))?></p>
-<p><strong>Opis:</strong> <?=nl2br(htmlspecialchars($event['description']))?></p>
-
-<h2>Repertuar:</h2>
-<table>
-<tr>
-<th>Część</th>
-<th>Tytuł</th>
-<th>Strona</th>
-<th>PDF</th>
-<th>Audio</th>
+  <h2 class="text-xl font-semibold mb-2">Repertuar</h2>
+  <table class="w-full border-collapse border border-gray-300">
+    <thead>
+      <tr class="bg-gray-100">
+        <th class="border border-gray-300 px-2 py-1">Część</th>
+        <th class="border border-gray-300 px-2 py-1">Tytuł</th>
+        <th class="border border-gray-300 px-2 py-1">Strona</th>
+        <th class="border border-gray-300 px-2 py-1">PDF</th>
+        <th class="border border-gray-300 px-2 py-1">Audio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach($parts as $part): ?>
+        <?php if(count($part['songs'])>0): ?>
+            <?php foreach($part['songs'] as $i=>$song): ?>
+            <tr>
+                <?php if($i==0): ?>
+                <td class="border border-gray-300 px-2 py-1" rowspan="<?=count($part['songs'])?>"><?=$part['name']?></td>
+                <?php endif; ?>
+                <td class="border border-gray-300 px-2 py-1"><?=$song['tytul']?></td>
+                <td class="border border-gray-300 px-2 py-1"><?=$song['hymn_number']?></td>
+                <td class="border border-gray-300 px-2 py-1">
+                    <?php if($song['pdf']): ?>
+                    <a href="<?=$song['pdf']?>" target="_blank">PDF</a>
+                    <?php endif; ?>
+                </td>
+                <td class="border border-gray-300 px-2 py-1">
+                    <?php if($song['audio']): ?>
+                    <audio controls><source src="<?=$song['audio']?>" type="audio/mpeg"></audio>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+        <tr>
+    <td class="border border-gray-300 px-2 py-1"><?=htmlspecialchars($part['name'])?></td>
+    <td class="border border-gray-300 px-2 py-1">-</td>
+    <td class="border border-gray-300 px-2 py-1">-</td>
+    <td class="border border-gray-300 px-2 py-1">-</td>
+    <td class="border border-gray-300 px-2 py-1">-</td>
 </tr>
-<?php foreach($MSZA_PARTS as $part_name): 
-      if(!isset($event_parts[$part_name])) continue; // jeśli część nie jest w tym wydarzeniu, pomijamy
-      $part_id = $event_parts[$part_name];
-      $song = $repertory[$part_id] ?? null;
-?>
-<tr>
-<td><?=htmlspecialchars($part_name)?></td>
-<td><?=htmlspecialchars($song['title'] ?? '')?></td>
-<td><?=htmlspecialchars($song['page_number'] ?? '')?></td>
-<td><?php if(!empty($song['pdf'])): ?><a href="<?=htmlspecialchars($song['pdf'])?>" target="_blank">PDF</a><?php endif;?></td>
-<td><?php if(!empty($song['audio'])): ?><a href="<?=htmlspecialchars($song['audio'])?>" target="_blank">Audio</a><?php endif;?></td>
-</tr>
-<?php endforeach; ?>
-</table>
-
-<p><a href="index.php">&laquo; Powrót do listy wydarzeń</a></p>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <a href="events.php" class="mt-4 inline-block px-4 py-2 border rounded">Powrót</a>
+</div>
 </body>
 </html>

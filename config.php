@@ -1,8 +1,8 @@
 <?php
-$host = 'localhost';
+$host = 'sql.ugu.pl';
 $db   = 'schola';
-$user = 'admin';
-$pass = 'tajnehaslo';
+$user = 'lukib';
+$pass = 'bgVL1GE8h744wFqV';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
